@@ -25,6 +25,7 @@ CLR_WARNING="${CLR_ESC}38;5;214m"   # Amber/Orange
 CLR_ERROR="${CLR_ESC}38;5;196m"     # Red
 CLR_RED="${CLR_ESC}38;5;196m"       # Red (Alias)
 CLR_INFO="${CLR_ESC}38;5;51m"       # Cyan
+CLR_CYAN="${CLR_ESC}38;5;51m"       # Cyan (quick-start command hints)
 CLR_MUTED="${CLR_ESC}38;5;244m"     # Gray
 
 # --- Icons ---
@@ -49,6 +50,7 @@ CHOSEN_QWEN=true
 CHOSEN_PI=true
 CHOSEN_AIDER=false
 CHOSEN_INTERPRETER=false
+CHOSEN_GENTLE_PI=false
 
 # --- Logging Helpers ---
 log_header() {
@@ -149,6 +151,7 @@ show_help() {
     echo -e "  --pi               Select Pi Coding Agent for installation"
     echo -e "  --aider            Select Aider for installation"
     echo -e "  --interpreter      Select Open Interpreter for installation"
+    echo -e "  --gentle-pi        Select Gentle-Pi (Gentle-AI harness for the Pi agent) for installation"
     echo -e "  --dry-run          Run script in dry-run mode, printing actions without executing them"
     echo -e "  -h, --help         Display this help message and exit"
     echo -e "\nIf no flags are provided, the script runs in interactive mode."
@@ -161,7 +164,7 @@ parse_args() {
         # Check if only dry-run is specified
         local has_selection_flag=false
         for arg in "$@"; do
-            if [[ "$arg" =~ ^--(claude|agy|opencode|gentle-ai|qwen|pi|aider|interpreter)$ ]] || [ "$arg" = "-a" ] || [ "$arg" = "--all" ] || [ "$arg" = "-y" ] || [ "$arg" = "--yes" ]; then
+            if [[ "$arg" =~ ^--(claude|agy|opencode|gentle-ai|qwen|pi|aider|interpreter|gentle-pi)$ ]] || [ "$arg" = "-a" ] || [ "$arg" = "--all" ] || [ "$arg" = "-y" ] || [ "$arg" = "--yes" ]; then
                 has_selection_flag=true
                 break
             fi
@@ -176,6 +179,7 @@ parse_args() {
             CHOSEN_PI=false
             CHOSEN_AIDER=false
             CHOSEN_INTERPRETER=false
+            CHOSEN_GENTLE_PI=false
         fi
     fi
 
@@ -202,6 +206,7 @@ parse_args() {
                 CHOSEN_PI=true
                 CHOSEN_AIDER=true
                 CHOSEN_INTERPRETER=true
+                CHOSEN_GENTLE_PI=true
                 shift
                 ;;
             --claude)
@@ -242,6 +247,11 @@ parse_args() {
             --interpreter)
                 NON_INTERACTIVE=true
                 CHOSEN_INTERPRETER=true
+                shift
+                ;;
+            --gentle-pi)
+                NON_INTERACTIVE=true
+                CHOSEN_GENTLE_PI=true
                 shift
                 ;;
             --dry-run)
@@ -326,7 +336,8 @@ interactive_menu() {
         local check_pi="[ ]"
         local check_aider="[ ]"
         local check_interpreter="[ ]"
-        
+        local check_gentle_pi="[ ]"
+
         [ "$CHOSEN_CLAUDE" = true ] && check_claude="[${CLR_SUCCESS}✔${CLR_RESET}]"
         [ "$CHOSEN_AGY" = true ] && check_agy="[${CLR_SUCCESS}✔${CLR_RESET}]"
         [ "$CHOSEN_OPENCODE" = true ] && check_opencode="[${CLR_SUCCESS}✔${CLR_RESET}]"
@@ -335,6 +346,7 @@ interactive_menu() {
         [ "$CHOSEN_PI" = true ] && check_pi="[${CLR_SUCCESS}✔${CLR_RESET}]"
         [ "$CHOSEN_AIDER" = true ] && check_aider="[${CLR_SUCCESS}✔${CLR_RESET}]"
         [ "$CHOSEN_INTERPRETER" = true ] && check_interpreter="[${CLR_SUCCESS}✔${CLR_RESET}]"
+        [ "$CHOSEN_GENTLE_PI" = true ] && check_gentle_pi="[${CLR_SUCCESS}✔${CLR_RESET}]"
         
         echo -e "  ${CLR_BOLD}1)${CLR_RESET} $check_claude Claude Code      ${CLR_MUTED}(Anthropic's official terminal agent)${CLR_RESET}"
         echo -e "  ${CLR_BOLD}2)${CLR_RESET} $check_agy Antigravity CLI  ${CLR_MUTED}(agy - Google's terminal agent)${CLR_RESET}"
@@ -344,6 +356,7 @@ interactive_menu() {
         echo -e "  ${CLR_BOLD}6)${CLR_RESET} $check_pi Pi Coding Agent   ${CLR_MUTED}(Minimalist open-source coding agent)${CLR_RESET}"
         echo -e "  ${CLR_BOLD}7)${CLR_RESET} $check_aider Aider            ${CLR_MUTED}(Popular coding pair programmer - requires pipx)${CLR_RESET}"
         echo -e "  ${CLR_BOLD}8)${CLR_RESET} $check_interpreter Open Interpreter ${CLR_MUTED}(Local code runner - requires pipx)${CLR_RESET}"
+        echo -e "  ${CLR_BOLD}9)${CLR_RESET} $check_gentle_pi Gentle-Pi         ${CLR_MUTED}(Gentle-AI harness for the Pi agent - requires Pi)${CLR_RESET}"
         echo -e ""
         echo -e "  ${CLR_BOLD}i)${CLR_RESET} Toggle All Default  ${CLR_MUTED}(Claude, agy, OpenCode, Gentle-AI, Qwen Code, Pi)${CLR_RESET}"
         echo -e "  ${CLR_BOLD}a)${CLR_RESET} Toggle All Tools"
@@ -352,7 +365,7 @@ interactive_menu() {
         echo -e "  ${CLR_BOLD}g)${CLR_RESET} ${CLR_BOLD}${CLR_SUCCESS}▶ PROCEED WITH INSTALLATION${CLR_RESET}"
         echo -e "  ${CLR_BOLD}q)${CLR_RESET} ${CLR_ERROR}Exit${CLR_RESET}\n"
         
-        read -p "➜ Enter option (1-8, i, a, d, g, q): " choice
+        read -p "➜ Enter option (1-9, i, a, d, g, q): " choice
         
         case "$choice" in
             1) CHOSEN_CLAUDE=$([ "$CHOSEN_CLAUDE" = true ] && echo false || echo true) ;;
@@ -363,6 +376,7 @@ interactive_menu() {
             6) CHOSEN_PI=$([ "$CHOSEN_PI" = true ] && echo false || echo true) ;;
             7) CHOSEN_AIDER=$([ "$CHOSEN_AIDER" = true ] && echo false || echo true) ;;
             8) CHOSEN_INTERPRETER=$([ "$CHOSEN_INTERPRETER" = true ] && echo false || echo true) ;;
+            9) CHOSEN_GENTLE_PI=$([ "$CHOSEN_GENTLE_PI" = true ] && echo false || echo true) ;;
             i)
                 if [ "$CHOSEN_CLAUDE" = true ] && [ "$CHOSEN_AGY" = true ] && [ "$CHOSEN_OPENCODE" = true ] && [ "$CHOSEN_GENTLE_AI" = true ] && [ "$CHOSEN_QWEN" = true ] && [ "$CHOSEN_PI" = true ]; then
                     CHOSEN_CLAUDE=false; CHOSEN_AGY=false; CHOSEN_OPENCODE=false; CHOSEN_GENTLE_AI=false; CHOSEN_QWEN=false; CHOSEN_PI=false
@@ -371,10 +385,10 @@ interactive_menu() {
                 fi
                 ;;
             a)
-                if [ "$CHOSEN_CLAUDE" = true ] && [ "$CHOSEN_AGY" = true ] && [ "$CHOSEN_OPENCODE" = true ] && [ "$CHOSEN_GENTLE_AI" = true ] && [ "$CHOSEN_QWEN" = true ] && [ "$CHOSEN_PI" = true ] && [ "$CHOSEN_AIDER" = true ] && [ "$CHOSEN_INTERPRETER" = true ]; then
-                    CHOSEN_CLAUDE=false; CHOSEN_AGY=false; CHOSEN_OPENCODE=false; CHOSEN_GENTLE_AI=false; CHOSEN_QWEN=false; CHOSEN_PI=false; CHOSEN_AIDER=false; CHOSEN_INTERPRETER=false
+                if [ "$CHOSEN_CLAUDE" = true ] && [ "$CHOSEN_AGY" = true ] && [ "$CHOSEN_OPENCODE" = true ] && [ "$CHOSEN_GENTLE_AI" = true ] && [ "$CHOSEN_QWEN" = true ] && [ "$CHOSEN_PI" = true ] && [ "$CHOSEN_AIDER" = true ] && [ "$CHOSEN_INTERPRETER" = true ] && [ "$CHOSEN_GENTLE_PI" = true ]; then
+                    CHOSEN_CLAUDE=false; CHOSEN_AGY=false; CHOSEN_OPENCODE=false; CHOSEN_GENTLE_AI=false; CHOSEN_QWEN=false; CHOSEN_PI=false; CHOSEN_AIDER=false; CHOSEN_INTERPRETER=false; CHOSEN_GENTLE_PI=false
                 else
-                    CHOSEN_CLAUDE=true; CHOSEN_AGY=true; CHOSEN_OPENCODE=true; CHOSEN_GENTLE_AI=true; CHOSEN_QWEN=true; CHOSEN_PI=true; CHOSEN_AIDER=true; CHOSEN_INTERPRETER=true
+                    CHOSEN_CLAUDE=true; CHOSEN_AGY=true; CHOSEN_OPENCODE=true; CHOSEN_GENTLE_AI=true; CHOSEN_QWEN=true; CHOSEN_PI=true; CHOSEN_AIDER=true; CHOSEN_INTERPRETER=true; CHOSEN_GENTLE_PI=true
                 fi
                 ;;
             d)
@@ -386,7 +400,7 @@ interactive_menu() {
                 ;;
             g)
                 # Verify we selected at least one
-                if [ "$CHOSEN_CLAUDE" = false ] && [ "$CHOSEN_AGY" = false ] && [ "$CHOSEN_OPENCODE" = false ] && [ "$CHOSEN_GENTLE_AI" = false ] && [ "$CHOSEN_QWEN" = false ] && [ "$CHOSEN_PI" = false ] && [ "$CHOSEN_AIDER" = false ] && [ "$CHOSEN_INTERPRETER" = false ]; then
+                if [ "$CHOSEN_CLAUDE" = false ] && [ "$CHOSEN_AGY" = false ] && [ "$CHOSEN_OPENCODE" = false ] && [ "$CHOSEN_GENTLE_AI" = false ] && [ "$CHOSEN_QWEN" = false ] && [ "$CHOSEN_PI" = false ] && [ "$CHOSEN_AIDER" = false ] && [ "$CHOSEN_INTERPRETER" = false ] && [ "$CHOSEN_GENTLE_PI" = false ]; then
                     log_warning "No tools selected. Please select at least one item to install."
                     sleep 2
                 else
@@ -465,6 +479,18 @@ install_interpreter() {
     fi
 }
 
+install_gentle_pi() {
+    log_step "Installing Gentle-Pi..."
+    # gentle-pi ships as a Pi package: pi install npm:gentle-pi@latest (needs the Pi agent).
+    hash -r
+    if [ "$DRY_RUN" = false ] && ! command -v pi &>/dev/null; then
+        log_error "Gentle-Pi requires the Pi agent, but 'pi' was not found in PATH."
+        log_info "Select Pi as well (--pi / menu option 6) or install it first, then re-run with --gentle-pi."
+        return 1
+    fi
+    run_with_spinner "Installing Gentle-Pi (pi install npm:gentle-pi@latest)" pi install npm:gentle-pi@latest
+}
+
 configure_gentle_ai() {
     if [ "$DRY_RUN" = true ]; then
         echo -e "  ${CLR_MUTED}[Dry-Run] Would automate Gentle-AI configuration${CLR_RESET}"
@@ -537,6 +563,7 @@ main() {
     [ "$CHOSEN_GENTLE_AI" = true ] && log_bullet "Gentle-AI"
     [ "$CHOSEN_QWEN" = true ] && log_bullet "Qwen Code"
     [ "$CHOSEN_PI" = true ] && log_bullet "Pi Coding Agent"
+    [ "$CHOSEN_GENTLE_PI" = true ] && log_bullet "Gentle-Pi"
     [ "$CHOSEN_AIDER" = true ] && log_bullet "Aider Pair Programmer"
     [ "$CHOSEN_INTERPRETER" = true ] && log_bullet "Open Interpreter"
     echo ""
@@ -594,6 +621,15 @@ main() {
             success_installs+=("Pi Coding Agent")
         else
             failed_installs+=("Pi Coding Agent")
+        fi
+    fi
+
+    # Gentle-Pi runs after Pi so the 'pi' package manager is available.
+    if [ "$CHOSEN_GENTLE_PI" = true ]; then
+        if install_gentle_pi; then
+            success_installs+=("Gentle-Pi")
+        else
+            failed_installs+=("Gentle-Pi")
         fi
     fi
 
@@ -659,6 +695,7 @@ main() {
     local show_pi_instructions=false
     local show_aider_instructions=false
     local show_interpreter_instructions=false
+    local show_gentle_pi_instructions=false
 
     for item in "${success_installs[@]}"; do
         [ "$item" = "Claude Code" ] && show_claude_instructions=true
@@ -669,6 +706,7 @@ main() {
         [ "$item" = "Pi Coding Agent" ] && show_pi_instructions=true
         [ "$item" = "Aider" ] && show_aider_instructions=true
         [ "$item" = "Open Interpreter" ] && show_interpreter_instructions=true
+        [ "$item" = "Gentle-Pi" ] && show_gentle_pi_instructions=true
     done
 
     # In dry-run mode, simulate all instructions
@@ -681,6 +719,7 @@ main() {
         show_pi_instructions=$CHOSEN_PI
         show_aider_instructions=$CHOSEN_AIDER
         show_interpreter_instructions=$CHOSEN_INTERPRETER
+        show_gentle_pi_instructions=$CHOSEN_GENTLE_PI
     fi
 
     if [ "$show_claude_instructions" = true ]; then
@@ -736,6 +775,13 @@ main() {
         echo -e "\n ${CLR_BOLD}${CLR_PRIMARY}8. Open Interpreter${CLR_RESET}"
         log_bullet "Command: ${CLR_BOLD}interpreter${CLR_RESET}"
         log_bullet "Start by running: ${CLR_CYAN}interpreter${CLR_RESET}"
+    fi
+
+    if [ "$show_gentle_pi_instructions" = true ]; then
+        echo -e "\n ${CLR_BOLD}${CLR_PRIMARY}9. Gentle-Pi${CLR_RESET}"
+        log_bullet "Runs on top of the Pi agent — launch Pi in any repo: ${CLR_CYAN}pi${CLR_RESET}"
+        log_bullet "Bootstrap SDD once per project: ${CLR_CYAN}/gentle-sdd-init${CLR_RESET} (inside Pi)"
+        log_bullet "Update anytime: ${CLR_CYAN}pi install npm:gentle-pi@latest${CLR_RESET}"
     fi
 
     echo -e "\n${CLR_BOLD}${CLR_MUTED}Thank you for using the AI Agent CLI Installer! Keep exploring! 🚀${CLR_RESET}\n"

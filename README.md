@@ -34,6 +34,7 @@ An elegant, interactive, and robust terminal installation assistant designed to 
 | **Pi Coding Agent** | `pi` | Minimalist open-source CLI coding agent | Curl installation script |
 | **Aider** | `aider` | High-fidelity terminal pair-programming coder | Curl installation script |
 | **Open Interpreter**| `interpreter`| Conversational CLI for running local machine code | `pipx` / `pip3` |
+| **Gentle-Pi** | `pi` | Gentle-AI harness (SDD, memory & curated skills) for the Pi agent | `pi install` package (requires Pi) |
 
 ---
 
@@ -68,7 +69,7 @@ To install the **default recommended agents** (Claude Code, agy, OpenCode, Gentl
 ./install.sh --yes
 ```
 
-To install **all available tools** (including Aider and Open Interpreter):
+To install **all available tools** (including Aider, Open Interpreter, and Gentle-Pi):
 
 ```bash
 ./install.sh --all
@@ -147,6 +148,18 @@ aider
 Run locally to execute code:
 ```bash
 interpreter
+```
+
+### 9. Gentle-Pi
+The Gentle-AI harness for the **Pi** agent (requires Pi to be installed first). It ships as a Pi package:
+```bash
+pi install npm:gentle-pi@latest
+```
+Then launch Pi inside any repository and bootstrap Spec-Driven Development once per project:
+```bash
+pi
+# inside Pi:
+/gentle-sdd-init
 ```
 
 ---
