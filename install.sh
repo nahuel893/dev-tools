@@ -357,6 +357,7 @@ interactive_menu() {
 
     printf '\e[?25l'                    # hide cursor
     trap 'printf "\e[?25h"' RETURN      # restore cursor when the function returns
+    trap 'printf "\e[?25h"' EXIT        # ...and on any exit path (Ctrl-C, exit 1 from a check)
 
     while true; do
         clear
@@ -376,7 +377,12 @@ interactive_menu() {
         echo -e "\n  ${CLR_BOLD}${CLR_SUCCESS}[ENTER] proceed with installation${CLR_RESET}     ${CLR_ERROR}[q] quit${CLR_RESET}"
 
         # Read one keystroke; decode arrow-key escape sequences (\e[A / \e[B).
-        IFS= read -rsn1 key || true
+        # EOF (stdin closed or not a terminal): fail closed. Otherwise the empty
+        # key would be treated as ENTER and install the defaults unattended.
+        if ! IFS= read -rsn1 key; then
+            log_error "No keyboard input available (stdin closed). Re-run in a terminal, or use --yes / explicit flags."
+            exit 1
+        fi
         if [ "$key" = $'\e' ]; then
             read -rsn2 -t 0.005 rest || true
             key+="$rest"
@@ -499,9 +505,9 @@ install_dotfiles() {
     log_step "Installing dotfiles (nahuel893/dotfiles)..."
     local dir="$HOME/dotfiles"
     if [ -d "$dir/.git" ]; then
-        run_with_spinner "Updating existing dotfiles repo" git -C "$dir" pull --ff-only
+        run_with_spinner "Updating existing dotfiles repo" git -C "$dir" pull --ff-only || return 1
     else
-        run_with_spinner "Cloning nahuel893/dotfiles into $dir" git clone https://github.com/nahuel893/dotfiles "$dir"
+        run_with_spinner "Cloning nahuel893/dotfiles into $dir" git clone https://github.com/nahuel893/dotfiles "$dir" || return 1
     fi
     if [ "$DRY_RUN" = false ] && [ ! -f "$dir/install.sh" ]; then
         log_error "dotfiles install.sh not found at $dir; skipping symlink step."
