@@ -51,6 +51,7 @@ CHOSEN_PI=true
 CHOSEN_AIDER=false
 CHOSEN_INTERPRETER=false
 CHOSEN_GENTLE_PI=false
+CHOSEN_DOTFILES=false
 
 # --- Logging Helpers ---
 log_header() {
@@ -152,6 +153,7 @@ show_help() {
     echo -e "  --aider            Select Aider for installation"
     echo -e "  --interpreter      Select Open Interpreter for installation"
     echo -e "  --gentle-pi        Select Gentle-Pi (Gentle-AI harness for the Pi agent) for installation"
+    echo -e "  --dotfiles         Clone and symlink the nahuel893/dotfiles rice (runs its install.sh)"
     echo -e "  --dry-run          Run script in dry-run mode, printing actions without executing them"
     echo -e "  -h, --help         Display this help message and exit"
     echo -e "\nIf no flags are provided, the script runs in interactive mode."
@@ -164,7 +166,7 @@ parse_args() {
         # Check if only dry-run is specified
         local has_selection_flag=false
         for arg in "$@"; do
-            if [[ "$arg" =~ ^--(claude|agy|opencode|gentle-ai|qwen|pi|aider|interpreter|gentle-pi)$ ]] || [ "$arg" = "-a" ] || [ "$arg" = "--all" ] || [ "$arg" = "-y" ] || [ "$arg" = "--yes" ]; then
+            if [[ "$arg" =~ ^--(claude|agy|opencode|gentle-ai|qwen|pi|aider|interpreter|gentle-pi|dotfiles)$ ]] || [ "$arg" = "-a" ] || [ "$arg" = "--all" ] || [ "$arg" = "-y" ] || [ "$arg" = "--yes" ]; then
                 has_selection_flag=true
                 break
             fi
@@ -180,6 +182,7 @@ parse_args() {
             CHOSEN_AIDER=false
             CHOSEN_INTERPRETER=false
             CHOSEN_GENTLE_PI=false
+            CHOSEN_DOTFILES=false
         fi
     fi
 
@@ -207,6 +210,7 @@ parse_args() {
                 CHOSEN_AIDER=true
                 CHOSEN_INTERPRETER=true
                 CHOSEN_GENTLE_PI=true
+                CHOSEN_DOTFILES=true
                 shift
                 ;;
             --claude)
@@ -252,6 +256,11 @@ parse_args() {
             --gentle-pi)
                 NON_INTERACTIVE=true
                 CHOSEN_GENTLE_PI=true
+                shift
+                ;;
+            --dotfiles)
+                NON_INTERACTIVE=true
+                CHOSEN_DOTFILES=true
                 shift
                 ;;
             --dry-run)
@@ -319,107 +328,108 @@ check_prerequisites() {
     return 0
 }
 
-# --- Interactive Selector Menu ---
+# --- Interactive Selector Menu (arrow keys + space to toggle) ---
 interactive_menu() {
-    local choice
+    # Data-driven rows: each entry is the name of its CHOSEN_* variable.
+    local -a keys=(
+        CHOSEN_CLAUDE CHOSEN_AGY CHOSEN_OPENCODE CHOSEN_GENTLE_AI CHOSEN_QWEN
+        CHOSEN_PI CHOSEN_GENTLE_PI CHOSEN_AIDER CHOSEN_INTERPRETER CHOSEN_DOTFILES
+    )
+    local -a labels=(
+        "Claude Code" "Antigravity CLI (agy)" "OpenCode" "Gentle-AI" "Qwen Code"
+        "Pi Coding Agent" "Gentle-Pi" "Aider" "Open Interpreter" "Dotfiles"
+    )
+    local -a descs=(
+        "Anthropic's official terminal agent"
+        "Google's terminal agent"
+        "Open-source provider-agnostic agent"
+        "AI harness, SDD configurator & memory booster"
+        "Qwen's official CLI coding agent"
+        "Minimalist open-source coding agent"
+        "Gentle-AI harness for the Pi agent - requires Pi"
+        "Coding pair programmer - requires pipx"
+        "Local code runner - requires pipx"
+        "Clone & symlink nahuel893/dotfiles (backs up existing configs)"
+    )
+    local -a defaults=(CHOSEN_CLAUDE CHOSEN_AGY CHOSEN_OPENCODE CHOSEN_GENTLE_AI CHOSEN_QWEN CHOSEN_PI)
+    local n=${#keys[@]}
+    local sel=0 key rest kk val box i any allsel nv
+
+    printf '\e[?25l'                    # hide cursor
+    trap 'printf "\e[?25h"' RETURN      # restore cursor when the function returns
+    trap 'printf "\e[?25h"' EXIT        # ...and on any exit path (Ctrl-C, exit 1 from a check)
+
     while true; do
         clear
         log_header
-        
-        echo -e "${CLR_BOLD}Select the CLI AI Agents / Tools you want to install:${CLR_RESET}\n"
-        
-        local check_claude="[ ]"
-        local check_agy="[ ]"
-        local check_opencode="[ ]"
-        local check_gentle="[ ]"
-        local check_qwen="[ ]"
-        local check_pi="[ ]"
-        local check_aider="[ ]"
-        local check_interpreter="[ ]"
-        local check_gentle_pi="[ ]"
+        echo -e "${CLR_BOLD}Select agents / tools to install${CLR_RESET}"
+        echo -e "${CLR_MUTED}  ↑/↓ (or j/k) move · SPACE toggle · a all · i defaults · d deps · ENTER install · q quit${CLR_RESET}\n"
 
-        [ "$CHOSEN_CLAUDE" = true ] && check_claude="[${CLR_SUCCESS}✔${CLR_RESET}]"
-        [ "$CHOSEN_AGY" = true ] && check_agy="[${CLR_SUCCESS}✔${CLR_RESET}]"
-        [ "$CHOSEN_OPENCODE" = true ] && check_opencode="[${CLR_SUCCESS}✔${CLR_RESET}]"
-        [ "$CHOSEN_GENTLE_AI" = true ] && check_gentle="[${CLR_SUCCESS}✔${CLR_RESET}]"
-        [ "$CHOSEN_QWEN" = true ] && check_qwen="[${CLR_SUCCESS}✔${CLR_RESET}]"
-        [ "$CHOSEN_PI" = true ] && check_pi="[${CLR_SUCCESS}✔${CLR_RESET}]"
-        [ "$CHOSEN_AIDER" = true ] && check_aider="[${CLR_SUCCESS}✔${CLR_RESET}]"
-        [ "$CHOSEN_INTERPRETER" = true ] && check_interpreter="[${CLR_SUCCESS}✔${CLR_RESET}]"
-        [ "$CHOSEN_GENTLE_PI" = true ] && check_gentle_pi="[${CLR_SUCCESS}✔${CLR_RESET}]"
-        
-        echo -e "  ${CLR_BOLD}1)${CLR_RESET} $check_claude Claude Code      ${CLR_MUTED}(Anthropic's official terminal agent)${CLR_RESET}"
-        echo -e "  ${CLR_BOLD}2)${CLR_RESET} $check_agy Antigravity CLI  ${CLR_MUTED}(agy - Google's terminal agent)${CLR_RESET}"
-        echo -e "  ${CLR_BOLD}3)${CLR_RESET} $check_opencode OpenCode         ${CLR_MUTED}(Open-source provider-agnostic agent)${CLR_RESET}"
-        echo -e "  ${CLR_BOLD}4)${CLR_RESET} $check_gentle Gentle-AI        ${CLR_MUTED}(AI harness, SDD configurator & memory booster)${CLR_RESET}"
-        echo -e "  ${CLR_BOLD}5)${CLR_RESET} $check_qwen Qwen Code         ${CLR_MUTED}(Qwen's official CLI coding agent)${CLR_RESET}"
-        echo -e "  ${CLR_BOLD}6)${CLR_RESET} $check_pi Pi Coding Agent   ${CLR_MUTED}(Minimalist open-source coding agent)${CLR_RESET}"
-        echo -e "  ${CLR_BOLD}7)${CLR_RESET} $check_aider Aider            ${CLR_MUTED}(Popular coding pair programmer - requires pipx)${CLR_RESET}"
-        echo -e "  ${CLR_BOLD}8)${CLR_RESET} $check_interpreter Open Interpreter ${CLR_MUTED}(Local code runner - requires pipx)${CLR_RESET}"
-        echo -e "  ${CLR_BOLD}9)${CLR_RESET} $check_gentle_pi Gentle-Pi         ${CLR_MUTED}(Gentle-AI harness for the Pi agent - requires Pi)${CLR_RESET}"
-        echo -e ""
-        echo -e "  ${CLR_BOLD}i)${CLR_RESET} Toggle All Default  ${CLR_MUTED}(Claude, agy, OpenCode, Gentle-AI, Qwen Code, Pi)${CLR_RESET}"
-        echo -e "  ${CLR_BOLD}a)${CLR_RESET} Toggle All Tools"
-        echo -e "  ${CLR_BOLD}d)${CLR_RESET} Run Dependency Check"
-        echo -e ""
-        echo -e "  ${CLR_BOLD}g)${CLR_RESET} ${CLR_BOLD}${CLR_SUCCESS}▶ PROCEED WITH INSTALLATION${CLR_RESET}"
-        echo -e "  ${CLR_BOLD}q)${CLR_RESET} ${CLR_ERROR}Exit${CLR_RESET}\n"
-        
-        read -p "➜ Enter option (1-9, i, a, d, g, q): " choice
-        
-        case "$choice" in
-            1) CHOSEN_CLAUDE=$([ "$CHOSEN_CLAUDE" = true ] && echo false || echo true) ;;
-            2) CHOSEN_AGY=$([ "$CHOSEN_AGY" = true ] && echo false || echo true) ;;
-            3) CHOSEN_OPENCODE=$([ "$CHOSEN_OPENCODE" = true ] && echo false || echo true) ;;
-            4) CHOSEN_GENTLE_AI=$([ "$CHOSEN_GENTLE_AI" = true ] && echo false || echo true) ;;
-            5) CHOSEN_QWEN=$([ "$CHOSEN_QWEN" = true ] && echo false || echo true) ;;
-            6) CHOSEN_PI=$([ "$CHOSEN_PI" = true ] && echo false || echo true) ;;
-            7) CHOSEN_AIDER=$([ "$CHOSEN_AIDER" = true ] && echo false || echo true) ;;
-            8) CHOSEN_INTERPRETER=$([ "$CHOSEN_INTERPRETER" = true ] && echo false || echo true) ;;
-            9) CHOSEN_GENTLE_PI=$([ "$CHOSEN_GENTLE_PI" = true ] && echo false || echo true) ;;
-            i)
-                if [ "$CHOSEN_CLAUDE" = true ] && [ "$CHOSEN_AGY" = true ] && [ "$CHOSEN_OPENCODE" = true ] && [ "$CHOSEN_GENTLE_AI" = true ] && [ "$CHOSEN_QWEN" = true ] && [ "$CHOSEN_PI" = true ]; then
-                    CHOSEN_CLAUDE=false; CHOSEN_AGY=false; CHOSEN_OPENCODE=false; CHOSEN_GENTLE_AI=false; CHOSEN_QWEN=false; CHOSEN_PI=false
-                else
-                    CHOSEN_CLAUDE=true; CHOSEN_AGY=true; CHOSEN_OPENCODE=true; CHOSEN_GENTLE_AI=true; CHOSEN_QWEN=true; CHOSEN_PI=true
-                fi
+        for (( i = 0; i < n; i++ )); do
+            kk="${keys[$i]}"; val="${!kk}"
+            if [ "$val" = true ]; then box="[${CLR_SUCCESS}✔${CLR_RESET}]"; else box="[ ]"; fi
+            if [ "$i" -eq "$sel" ]; then
+                echo -e "  ${CLR_PRIMARY}${CLR_BOLD}❯${CLR_RESET} $box ${CLR_BOLD}${labels[$i]}${CLR_RESET}  ${CLR_MUTED}${descs[$i]}${CLR_RESET}"
+            else
+                echo -e "    $box ${labels[$i]}  ${CLR_MUTED}${descs[$i]}${CLR_RESET}"
+            fi
+        done
+        echo -e "\n  ${CLR_BOLD}${CLR_SUCCESS}[ENTER] proceed with installation${CLR_RESET}     ${CLR_ERROR}[q] quit${CLR_RESET}"
+
+        # Read one keystroke; decode arrow-key escape sequences (\e[A / \e[B).
+        # EOF (stdin closed or not a terminal): fail closed. Otherwise the empty
+        # key would be treated as ENTER and install the defaults unattended.
+        if ! IFS= read -rsn1 key; then
+            log_error "No keyboard input available (stdin closed). Re-run in a terminal, or use --yes / explicit flags."
+            exit 1
+        fi
+        if [ "$key" = $'\e' ]; then
+            read -rsn2 -t 0.005 rest || true
+            key+="$rest"
+        fi
+
+        case "$key" in
+            $'\e[A'|k|K) sel=$(( (sel - 1 + n) % n )) ;;   # up
+            $'\e[B'|j|J) sel=$(( (sel + 1) % n )) ;;        # down
+            ' ')                                            # toggle current row
+                kk="${keys[$sel]}"
+                if [ "${!kk}" = true ]; then printf -v "$kk" 'false'; else printf -v "$kk" 'true'; fi
                 ;;
-            a)
-                if [ "$CHOSEN_CLAUDE" = true ] && [ "$CHOSEN_AGY" = true ] && [ "$CHOSEN_OPENCODE" = true ] && [ "$CHOSEN_GENTLE_AI" = true ] && [ "$CHOSEN_QWEN" = true ] && [ "$CHOSEN_PI" = true ] && [ "$CHOSEN_AIDER" = true ] && [ "$CHOSEN_INTERPRETER" = true ] && [ "$CHOSEN_GENTLE_PI" = true ]; then
-                    CHOSEN_CLAUDE=false; CHOSEN_AGY=false; CHOSEN_OPENCODE=false; CHOSEN_GENTLE_AI=false; CHOSEN_QWEN=false; CHOSEN_PI=false; CHOSEN_AIDER=false; CHOSEN_INTERPRETER=false; CHOSEN_GENTLE_PI=false
-                else
-                    CHOSEN_CLAUDE=true; CHOSEN_AGY=true; CHOSEN_OPENCODE=true; CHOSEN_GENTLE_AI=true; CHOSEN_QWEN=true; CHOSEN_PI=true; CHOSEN_AIDER=true; CHOSEN_INTERPRETER=true; CHOSEN_GENTLE_PI=true
-                fi
+            a|A)                                            # toggle every row
+                allsel=true
+                for kk in "${keys[@]}"; do [ "${!kk}" = true ] || { allsel=false; break; }; done
+                nv=true; [ "$allsel" = true ] && nv=false
+                for kk in "${keys[@]}"; do printf -v "$kk" "$nv"; done
                 ;;
-            d)
-                set +e
-                check_prerequisites
-                set -e
-                echo -e "\nPress ENTER to return..."
-                read -r _
+            i|I)                                            # toggle the default set
+                allsel=true
+                for kk in "${defaults[@]}"; do [ "${!kk}" = true ] || { allsel=false; break; }; done
+                nv=true; [ "$allsel" = true ] && nv=false
+                for kk in "${defaults[@]}"; do printf -v "$kk" "$nv"; done
                 ;;
-            g)
-                # Verify we selected at least one
-                if [ "$CHOSEN_CLAUDE" = false ] && [ "$CHOSEN_AGY" = false ] && [ "$CHOSEN_OPENCODE" = false ] && [ "$CHOSEN_GENTLE_AI" = false ] && [ "$CHOSEN_QWEN" = false ] && [ "$CHOSEN_PI" = false ] && [ "$CHOSEN_AIDER" = false ] && [ "$CHOSEN_INTERPRETER" = false ] && [ "$CHOSEN_GENTLE_PI" = false ]; then
-                    log_warning "No tools selected. Please select at least one item to install."
-                    sleep 2
+            d|D)                                            # run dependency check
+                printf '\e[?25h'
+                set +e; check_prerequisites; set -e
+                echo -e "\nPress ENTER to return..."; read -r _ || true
+                printf '\e[?25l'
+                ;;
+            ''|$'\n'|$'\r')                                 # ENTER → proceed
+                any=false
+                for kk in "${keys[@]}"; do [ "${!kk}" = true ] && { any=true; break; }; done
+                if [ "$any" = false ]; then
+                    log_warning "No tools selected. Use SPACE to mark at least one."
+                    sleep 1.5
                 else
-                    # Perform final prerequisite check before proceeding
                     set +e
-                    if check_prerequisites; then
-                        set -e
-                        break
-                    fi
+                    if check_prerequisites; then set -e; break; fi
                     set -e
+                    echo -e "\nPress ENTER to return to the menu..."; read -r _ || true
                 fi
                 ;;
-            q)
+            q|Q)
+                printf '\e[?25h'
                 log_info "Exiting. No changes made."
                 exit 0
-                ;;
-            *)
-                log_warning "Invalid option. Please try again."
-                sleep 1
                 ;;
         esac
     done
@@ -489,6 +499,23 @@ install_gentle_pi() {
         return 1
     fi
     run_with_spinner "Installing Gentle-Pi (pi install npm:gentle-pi@latest)" pi install npm:gentle-pi@latest
+}
+
+install_dotfiles() {
+    log_step "Installing dotfiles (nahuel893/dotfiles)..."
+    local dir="$HOME/dotfiles"
+    if [ -d "$dir/.git" ]; then
+        run_with_spinner "Updating existing dotfiles repo" git -C "$dir" pull --ff-only || return 1
+    else
+        run_with_spinner "Cloning nahuel893/dotfiles into $dir" git clone https://github.com/nahuel893/dotfiles "$dir" || return 1
+    fi
+    if [ "$DRY_RUN" = false ] && [ ! -f "$dir/install.sh" ]; then
+        log_error "dotfiles install.sh not found at $dir; skipping symlink step."
+        return 1
+    fi
+    # The repo's own install.sh symlinks configs into ~/.config (backing up any
+    # existing real files to <file>.bak first).
+    run_with_spinner "Linking dotfiles (running its install.sh)" bash "$dir/install.sh"
 }
 
 configure_gentle_ai() {
@@ -566,6 +593,7 @@ main() {
     [ "$CHOSEN_GENTLE_PI" = true ] && log_bullet "Gentle-Pi"
     [ "$CHOSEN_AIDER" = true ] && log_bullet "Aider Pair Programmer"
     [ "$CHOSEN_INTERPRETER" = true ] && log_bullet "Open Interpreter"
+    [ "$CHOSEN_DOTFILES" = true ] && log_bullet "Dotfiles (nahuel893/dotfiles)"
     echo ""
 
     if [ "$DRY_RUN" = true ]; then
@@ -649,6 +677,14 @@ main() {
         fi
     fi
 
+    if [ "$CHOSEN_DOTFILES" = true ]; then
+        if install_dotfiles; then
+            success_installs+=("Dotfiles")
+        else
+            failed_installs+=("Dotfiles")
+        fi
+    fi
+
     # Run post-install configurations if applicable (only if Gentle-AI was successfully installed)
     local gentle_success=false
     for item in "${success_installs[@]}"; do
@@ -696,6 +732,7 @@ main() {
     local show_aider_instructions=false
     local show_interpreter_instructions=false
     local show_gentle_pi_instructions=false
+    local show_dotfiles_instructions=false
 
     for item in "${success_installs[@]}"; do
         [ "$item" = "Claude Code" ] && show_claude_instructions=true
@@ -707,6 +744,7 @@ main() {
         [ "$item" = "Aider" ] && show_aider_instructions=true
         [ "$item" = "Open Interpreter" ] && show_interpreter_instructions=true
         [ "$item" = "Gentle-Pi" ] && show_gentle_pi_instructions=true
+        [ "$item" = "Dotfiles" ] && show_dotfiles_instructions=true
     done
 
     # In dry-run mode, simulate all instructions
@@ -720,6 +758,7 @@ main() {
         show_aider_instructions=$CHOSEN_AIDER
         show_interpreter_instructions=$CHOSEN_INTERPRETER
         show_gentle_pi_instructions=$CHOSEN_GENTLE_PI
+        show_dotfiles_instructions=$CHOSEN_DOTFILES
     fi
 
     if [ "$show_claude_instructions" = true ]; then
@@ -782,6 +821,13 @@ main() {
         log_bullet "Runs on top of the Pi agent — launch Pi in any repo: ${CLR_CYAN}pi${CLR_RESET}"
         log_bullet "Bootstrap SDD once per project: ${CLR_CYAN}/gentle-sdd-init${CLR_RESET} (inside Pi)"
         log_bullet "Update anytime: ${CLR_CYAN}pi install npm:gentle-pi@latest${CLR_RESET}"
+    fi
+
+    if [ "$show_dotfiles_instructions" = true ]; then
+        echo -e "\n ${CLR_BOLD}${CLR_PRIMARY}10. Dotfiles${CLR_RESET}"
+        log_bullet "Cloned to ${CLR_BOLD}~/dotfiles${CLR_RESET} and symlinked via its own install.sh."
+        log_bullet "Existing real configs were backed up to ${CLR_BOLD}<file>.bak${CLR_RESET}."
+        log_bullet "Re-link anytime: ${CLR_CYAN}bash ~/dotfiles/install.sh${CLR_RESET}"
     fi
 
     echo -e "\n${CLR_BOLD}${CLR_MUTED}Thank you for using the AI Agent CLI Installer! Keep exploring! 🚀${CLR_RESET}\n"
