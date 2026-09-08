@@ -1,0 +1,18 @@
+{
+  "default_model": "claude-bridge/claude-sonnet-5",
+  "default_effort": "xhigh",
+  "model_profiles": {
+    "sdd-init": {
+      "model": "claude-bridge/claude-sonnet-5",
+      "effort": "xhigh"
+    },
+    "pr-merge-check": {
+      "model": "claude-bridge/claude-sonnet-5",
+      "effort": "high"
+    },
+    "gh-writer": {
+      "model": "claude-bridge/claude-sonnet-5",
+      "effort": "high"
+    }
+  }
+}

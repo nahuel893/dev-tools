@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "assets": {
+    "chains/4r-review.chain.md": "7d96aabd1426a388d1bde371f141d0c3ba836cee93cd54971a28fe1204942b18",
+    "chains/sdd-full.chain.md": "231c924cab32782915e6ccbc74ceedcd789644bad33c4f05c9c704041f283ca7",
+    "chains/sdd-plan.chain.md": "edf86142d44617c06d4587336cf945d4b246813937977c412e4343a9991b5b4b",
+    "chains/sdd-verify.chain.md": "b3c5852653d53e224c1bf726f844295c57d451ff5abff39e5c582381415dd799",
+    "gentle-ai/support/sdd-status-contract.md": "49488777652a28170cc0f7e136dc22a406678d70c80f61ee73e6b2aac824d961",
+    "gentle-ai/support/strict-tdd-verify.md": "becb50da4841aae5f6b157462efbfcd4f20332c0c054c82a55970450be8e649c",
+    "gentle-ai/support/strict-tdd.md": "2b0340bfa1160db7f609a4e1b6a24bbd3a1b1a8347b2b65d400865c104fdd237"
+  }
+}

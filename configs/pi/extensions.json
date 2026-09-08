@@ -1,0 +1,52 @@
+{
+  "packages": [
+    {
+      "name": "pi-claude-bridge",
+      "spec": "npm:pi-claude-bridge",
+      "version": "^0.7.0",
+      "description": "Bridge connecting Pi agent with Claude CLI and model routing"
+    },
+    {
+      "name": "gentle-pi",
+      "spec": "npm:gentle-pi@latest",
+      "version": "^2.5.0",
+      "description": "Gentle-AI harness for Pi: SDD workflows, memory, subagent orchestration"
+    },
+    {
+      "name": "gentle-engram",
+      "spec": "npm:gentle-engram@0.1.11",
+      "version": "^0.1.11",
+      "description": "Engram persistent memory integration for Pi"
+    },
+    {
+      "name": "@juicesharp/rpiv-ask-user-question",
+      "spec": "npm:@juicesharp/rpiv-ask-user-question",
+      "version": "^2.9.0",
+      "description": "Interactive question and multiple-choice prompt UI tool"
+    },
+    {
+      "name": "pi-web-access",
+      "spec": "npm:pi-web-access",
+      "version": "^0.28.0",
+      "description": "Web search and URL content fetching tools"
+    },
+    {
+      "name": "pi-btw",
+      "spec": "npm:pi-btw",
+      "version": "^0.4.1",
+      "description": "Sidecar assistance and context injection"
+    },
+    {
+      "name": "@estebanforge/pi-antigravity-bridge",
+      "spec": "npm:@estebanforge/pi-antigravity-bridge",
+      "version": "^1.4.10",
+      "description": "Bridge connecting Pi with Google Antigravity CLI and subagents"
+    },
+    {
+      "name": "pi-mcp-adapter",
+      "spec": "npm:pi-mcp-adapter",
+      "version": "^2.32.1",
+      "description": "Model Context Protocol (MCP) server adapter for Pi"
+    }
+  ]
+}

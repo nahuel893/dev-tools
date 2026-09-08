@@ -1,0 +1,80 @@
+{
+  "installed_agents": [
+    "opencode",
+    "gemini-cli",
+    "claude-code",
+    "antigravity",
+    "pi"
+  ],
+  "installed_binary_version": "2.7.0",
+  "managed_asset_digest": "sha256:006271de354b59bf2584b59037dc3dfe50716570d7db30f8a0791201119b3b62",
+  "selection_configured": true,
+  "components": [
+    "engram",
+    "sdd",
+    "skills",
+    "context7",
+    "permissions",
+    "gga",
+    "claude-theme",
+    "opencode-gentle-logo",
+    "persona"
+  ],
+  "preset": "full-gentleman",
+  "sdd_mode": "multi",
+  "strict_tdd": true,
+  "community_tools": [
+    "codegraph"
+  ],
+  "community_tools_configured": true,
+  "claude_phase_assignments": {
+    "default": {
+      "model": "sonnet"
+    },
+    "jd-fix-agent": {
+      "model": "sonnet"
+    },
+    "jd-judge-a": {
+      "model": "sonnet"
+    },
+    "jd-judge-b": {
+      "model": "sonnet"
+    },
+    "sdd-apply": {
+      "model": "sonnet"
+    },
+    "sdd-archive": {
+      "model": "haiku"
+    },
+    "sdd-design": {
+      "model": "opus"
+    },
+    "sdd-explore": {
+      "model": "sonnet"
+    },
+    "sdd-onboard": {
+      "model": "haiku"
+    },
+    "sdd-propose": {
+      "model": "opus"
+    },
+    "sdd-research": {
+      "model": "sonnet"
+    },
+    "sdd-spec": {
+      "model": "sonnet"
+    },
+    "sdd-tasks": {
+      "model": "sonnet"
+    },
+    "sdd-verify": {
+      "model": "sonnet"
+    }
+  },
+  "persona": "gentleman",
+  "last_update_check": "2026-09-08T14:29:16.777762875-03:00",
+  "rdd_mode": "on",
+  "rdd_mode_recorded_at": "2026-09-08T15:19:34.304369206Z",
+  "opencode_background_subagents": "on",
+  "pi_background_subagents": "on"
+}
