@@ -16,7 +16,7 @@ An elegant, interactive, and robust terminal installation assistant designed to 
 - ⠋ **Polished Loading Indicators**: Dynamic braille spinners displaying live progress during agent downloads and installations.
 - 🧠 **Automated Gentle-AI Setup**: Dynamically configures Gentle-AI memory harnesses, SDD presets, and persona templates for all selected agents post-installation.
 - ⚙️ **Automatic Dependency Checks**: Automatic diagnostics for prerequisites like `curl`, `git`, `npm`, and `pipx`.
-- 🕹️ **Interactive Selection Menu**: TUI selector where you can toggle agents/tools dynamically.
+- 🕹️ **Interactive Selection Menu**: arrow-key TUI selector — **↑/↓** (or j/k) to move, **SPACE** to toggle a checkbox, **ENTER** to install.
 - 🤖 **Non-interactive / Headless Mode**: Full support for flags (e.g. `--yes`, `--all`) to allow seamless automation, scripting, and CI/CD pipelines.
 - 🔍 **Safe Simulated Executions**: Support for `--dry-run` to inspect commands before executing changes on your system.
 
@@ -35,6 +35,7 @@ An elegant, interactive, and robust terminal installation assistant designed to 
 | **Aider** | `aider` | High-fidelity terminal pair-programming coder | Curl installation script |
 | **Open Interpreter**| `interpreter`| Conversational CLI for running local machine code | `pipx` / `pip3` |
 | **Gentle-Pi** | `pi` | Gentle-AI harness (SDD, memory & curated skills) for the Pi agent | `pi install` package (requires Pi) |
+| **Dotfiles** | `—` | Clone & symlink the nahuel893/dotfiles rice (sway, kitty, ghostty, themes) | `git clone` + repo `install.sh` |
 
 ---
 
@@ -60,7 +61,7 @@ Simply execute the installer script without arguments. It will launch a beautifu
 ./install.sh
 ```
 
-Within the interactive menu, you can toggle agents, verify your dependencies, and proceed with the installation of your selections.
+Navigate the menu with the **arrow keys** (or `j`/`k`), toggle a checkbox with **SPACE**, and start the install with **ENTER**. `a` toggles every row, `i` toggles the default set, `d` runs a dependency check, and `q` quits without changes.
 
 ### 2. Non-interactive Mode (Automated)
 To install the **default recommended agents** (Claude Code, agy, OpenCode, Gentle-AI, Qwen Code, and Pi) silently:
@@ -69,7 +70,7 @@ To install the **default recommended agents** (Claude Code, agy, OpenCode, Gentl
 ./install.sh --yes
 ```
 
-To install **all available tools** (including Aider, Open Interpreter, and Gentle-Pi):
+To install **all available tools** (including Aider, Open Interpreter, Gentle-Pi, and the dotfiles):
 
 ```bash
 ./install.sh --all
@@ -160,6 +161,15 @@ Then launch Pi inside any repository and bootstrap Spec-Driven Development once 
 pi
 # inside Pi:
 /gentle-sdd-init
+```
+
+### 10. Dotfiles
+Clones **nahuel893/dotfiles** to `~/dotfiles` (or pulls if it already exists) and runs the repo's own `install.sh`, which symlinks the configs into `~/.config` — backing up any existing real files to `<file>.bak` first.
+```bash
+# select it: menu checkbox, or
+./install.sh --dotfiles
+# re-link anytime:
+bash ~/dotfiles/install.sh
 ```
 
 ---
