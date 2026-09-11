@@ -70,6 +70,12 @@ cat << 'EXTEOF' > "$CONFIGS_DIR/pi/extensions.json"
 {
   "packages": [
     {
+      "name": "pi-claude-auth",
+      "spec": "npm:pi-claude-auth@latest",
+      "version": "^0.1.3",
+      "description": "Reuses your Claude Code credentials in Pi, so no separate login is needed"
+    },
+    {
       "name": "pi-claude-bridge",
       "spec": "npm:pi-claude-bridge",
       "version": "^0.7.0",

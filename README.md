@@ -35,6 +35,7 @@ An elegant, interactive, and robust terminal installation assistant designed to 
 | **Aider** | `aider` | High-fidelity terminal pair-programming coder | Curl installation script |
 | **Open Interpreter**| `interpreter`| Conversational CLI for running local machine code | `pipx` / `pip3` |
 | **Gentle-Pi** | `pi` | Gentle-AI harness (SDD, memory & curated skills) for the Pi agent | `pi install` package (requires Pi) |
+| **Pi Extensions** | `—` | Restores every Pi extension captured in `configs/pi/extensions.json` (claude-auth, claude-bridge, engram, web-access, mcp-adapter, …) | `pi install` per package (requires Pi) |
 | **Dotfiles** | `—` | Clone & symlink the nahuel893/dotfiles rice (sway, kitty, ghostty, themes) | `git clone` + repo `install.sh` |
 
 ---
@@ -151,7 +152,26 @@ Run locally to execute code:
 interpreter
 ```
 
-### 9. Gentle-Pi
+### 9. Pi Extensions
+
+`configs/pi/extensions.json` is the manifest of Pi extensions, written by
+`scripts/snapshot-ai-configs.sh`. Restoring it installs each package in turn:
+
+```bash
+./install.sh --pi-extensions
+```
+
+Every extension installs independently, so one bad package does not take the
+rest down. `pi install` is idempotent, so re-running is safe. When the script
+is piped from curl and no local `configs/` exists, the manifest is fetched
+from the repo.
+
+To add an extension, add an entry to **both** `configs/pi/extensions.json` and
+the matching heredoc in `scripts/snapshot-ai-configs.sh` — the snapshot script
+rewrites that file from the heredoc, so an entry added to only one of them is
+lost on the next snapshot.
+
+### 10. Gentle-Pi
 The Gentle-AI harness for the **Pi** agent (requires Pi to be installed first). It ships as a Pi package:
 ```bash
 pi install npm:gentle-pi@latest
@@ -163,7 +183,7 @@ pi
 /gentle-sdd-init
 ```
 
-### 10. Dotfiles
+### 11. Dotfiles
 Clones **nahuel893/dotfiles** to `~/dotfiles` (or pulls if it already exists) and runs the repo's own `install.sh`, which symlinks the configs into `~/.config` — backing up any existing real files to `<file>.bak` first.
 ```bash
 # select it: menu checkbox, or

@@ -52,6 +52,13 @@ CHOSEN_AIDER=false
 CHOSEN_INTERPRETER=false
 CHOSEN_GENTLE_PI=false
 CHOSEN_DOTFILES=false
+CHOSEN_PI_EXTENSIONS=false
+
+# Pi extension manifest. Resolved next to this script when it was cloned, and
+# fetched from the repo when the script is piped straight from curl.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "$PWD")"
+PI_EXTENSIONS_FILE="$SCRIPT_DIR/configs/pi/extensions.json"
+PI_EXTENSIONS_URL="https://raw.githubusercontent.com/nahuel893/dev-tools/main/configs/pi/extensions.json"
 
 # --- Logging Helpers ---
 log_header() {
@@ -153,6 +160,7 @@ show_help() {
     echo -e "  --aider            Select Aider for installation"
     echo -e "  --interpreter      Select Open Interpreter for installation"
     echo -e "  --gentle-pi        Select Gentle-Pi (Gentle-AI harness for the Pi agent) for installation"
+    echo -e "  --pi-extensions    Restore every Pi extension listed in configs/pi/extensions.json"
     echo -e "  --dotfiles         Clone and symlink the nahuel893/dotfiles rice (runs its install.sh)"
     echo -e "  --dry-run          Run script in dry-run mode, printing actions without executing them"
     echo -e "  -h, --help         Display this help message and exit"
@@ -166,7 +174,7 @@ parse_args() {
         # Check if only dry-run is specified
         local has_selection_flag=false
         for arg in "$@"; do
-            if [[ "$arg" =~ ^--(claude|agy|opencode|gentle-ai|qwen|pi|aider|interpreter|gentle-pi|dotfiles)$ ]] || [ "$arg" = "-a" ] || [ "$arg" = "--all" ] || [ "$arg" = "-y" ] || [ "$arg" = "--yes" ]; then
+            if [[ "$arg" =~ ^--(claude|agy|opencode|gentle-ai|qwen|pi|aider|interpreter|gentle-pi|pi-extensions|dotfiles)$ ]] || [ "$arg" = "-a" ] || [ "$arg" = "--all" ] || [ "$arg" = "-y" ] || [ "$arg" = "--yes" ]; then
                 has_selection_flag=true
                 break
             fi
@@ -183,6 +191,7 @@ parse_args() {
             CHOSEN_INTERPRETER=false
             CHOSEN_GENTLE_PI=false
             CHOSEN_DOTFILES=false
+            CHOSEN_PI_EXTENSIONS=false
         fi
     fi
 
@@ -211,6 +220,7 @@ parse_args() {
                 CHOSEN_INTERPRETER=true
                 CHOSEN_GENTLE_PI=true
                 CHOSEN_DOTFILES=true
+                CHOSEN_PI_EXTENSIONS=true
                 shift
                 ;;
             --claude)
@@ -256,6 +266,11 @@ parse_args() {
             --gentle-pi)
                 NON_INTERACTIVE=true
                 CHOSEN_GENTLE_PI=true
+                shift
+                ;;
+            --pi-extensions)
+                NON_INTERACTIVE=true
+                CHOSEN_PI_EXTENSIONS=true
                 shift
                 ;;
             --dotfiles)
@@ -333,11 +348,13 @@ interactive_menu() {
     # Data-driven rows: each entry is the name of its CHOSEN_* variable.
     local -a keys=(
         CHOSEN_CLAUDE CHOSEN_AGY CHOSEN_OPENCODE CHOSEN_GENTLE_AI CHOSEN_QWEN
-        CHOSEN_PI CHOSEN_GENTLE_PI CHOSEN_AIDER CHOSEN_INTERPRETER CHOSEN_DOTFILES
+        CHOSEN_PI CHOSEN_GENTLE_PI CHOSEN_PI_EXTENSIONS CHOSEN_AIDER CHOSEN_INTERPRETER
+        CHOSEN_DOTFILES
     )
     local -a labels=(
         "Claude Code" "Antigravity CLI (agy)" "OpenCode" "Gentle-AI" "Qwen Code"
-        "Pi Coding Agent" "Gentle-Pi" "Aider" "Open Interpreter" "Dotfiles"
+        "Pi Coding Agent" "Gentle-Pi" "Pi Extensions" "Aider" "Open Interpreter"
+        "Dotfiles"
     )
     local -a descs=(
         "Anthropic's official terminal agent"
@@ -347,6 +364,7 @@ interactive_menu() {
         "Qwen's official CLI coding agent"
         "Minimalist open-source coding agent"
         "Gentle-AI harness for the Pi agent - requires Pi"
+        "Every extension in configs/pi/extensions.json - requires Pi"
         "Coding pair programmer - requires pipx"
         "Local code runner - requires pipx"
         "Clone & symlink nahuel893/dotfiles (backs up existing configs)"
@@ -499,6 +517,74 @@ install_gentle_pi() {
         return 1
     fi
     run_with_spinner "Installing Gentle-Pi (pi install npm:gentle-pi@latest)" pi install npm:gentle-pi@latest
+}
+
+# Restores the Pi extensions captured by scripts/snapshot-ai-configs.sh.
+# Before this existed the snapshot was write-only: the manifest was committed
+# on every run and nothing ever read it back, so a fresh box got Pi and
+# Gentle-Pi and silently missed the rest.
+install_pi_extensions() {
+    log_step "Restoring Pi extensions..."
+    hash -r
+
+    if [ "$DRY_RUN" = false ] && ! command -v pi &>/dev/null; then
+        log_error "Pi extensions require the Pi agent, but 'pi' was not found in PATH."
+        log_info "Select Pi as well (--pi / the Pi Coding Agent row) or install it first, then re-run with --pi-extensions."
+        return 1
+    fi
+
+    # Cloned checkout first; fall back to the repo when piped from curl.
+    local manifest="$PI_EXTENSIONS_FILE"
+    local tmp_manifest=""
+    if [ ! -f "$manifest" ]; then
+        log_info "No local manifest at $manifest — fetching it from the repo."
+        tmp_manifest="$(mktemp)"
+        if ! curl -fsSL "$PI_EXTENSIONS_URL" -o "$tmp_manifest"; then
+            rm -f "$tmp_manifest"
+            log_error "Could not read the extension manifest, locally or from $PI_EXTENSIONS_URL."
+            return 1
+        fi
+        manifest="$tmp_manifest"
+    fi
+
+    # jq when it is around, otherwise a plain text scan. The manifest is
+    # generated with one "spec" per package, so the fallback is not a gamble.
+    local specs
+    if command -v jq &>/dev/null; then
+        specs="$(jq -r '.packages[].spec' "$manifest" 2>/dev/null)"
+    else
+        specs="$(grep -o '"spec"[[:space:]]*:[[:space:]]*"[^"]*"' "$manifest" | cut -d'"' -f4)"
+    fi
+    [ -n "$tmp_manifest" ] && rm -f "$tmp_manifest"
+
+    if [ -z "$specs" ]; then
+        log_error "The extension manifest listed no packages."
+        return 1
+    fi
+
+    local total failed=0 spec name
+    total="$(printf '%s\n' "$specs" | wc -l | tr -d ' ')"
+    log_info "Found $total extension(s) in the manifest."
+
+    # Each extension installs on its own so one bad package cannot take the
+    # rest down with it. pi install is idempotent, so re-running is harmless
+    # and Gentle-Pi appearing here as well is not a conflict.
+    while IFS= read -r spec; do
+        [ -n "$spec" ] || continue
+        name="${spec#npm:}"
+        if ! run_with_spinner "Installing $name" pi install "$spec"; then
+            log_warning "Failed to install $name — continuing with the rest."
+            failed=$((failed + 1))
+        fi
+    done <<< "$specs"
+
+    if [ "$failed" -gt 0 ]; then
+        log_warning "$failed of $total extension(s) failed."
+        return 1
+    fi
+
+    log_success "All $total Pi extension(s) restored."
+    return 0
 }
 
 install_dotfiles() {
@@ -658,6 +744,15 @@ main() {
             success_installs+=("Gentle-Pi")
         else
             failed_installs+=("Gentle-Pi")
+        fi
+    fi
+
+    # After Gentle-Pi for the same reason: 'pi' has to exist first.
+    if [ "$CHOSEN_PI_EXTENSIONS" = true ]; then
+        if install_pi_extensions; then
+            success_installs+=("Pi Extensions")
+        else
+            failed_installs+=("Pi Extensions")
         fi
     fi
 
